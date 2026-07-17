@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   loxone-solar-forecast:
     image: loxone-solar-forecast:latest
