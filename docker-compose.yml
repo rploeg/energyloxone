@@ -1,5 +1,6 @@
 services:
   loxone-solar-forecast:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,5 +1,6 @@
 services:
   loxone-solar-forecast:
+    platform: linux/amd64
     image: loxone-solar-forecast:latest
     container_name: loxone-solar-forecast
     build:

@@ -6,15 +6,17 @@ WORKDIR /src
 
 # Copy project file and restore (layer caching)
 COPY ["LoxoneSolarForecast.csproj", "."]
-RUN dotnet restore "LoxoneSolarForecast.csproj"
+RUN dotnet restore "LoxoneSolarForecast.csproj" -r linux-x64
 
 # Copy source and build
 COPY . .
 RUN dotnet publish "LoxoneSolarForecast.csproj" \
     -c Release \
     -o /app/publish \
+    -r linux-x64 \
     --no-restore \
-    --self-contained false
+    --self-contained false \
+    /p:UseAppHost=false
 
 # ─────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
