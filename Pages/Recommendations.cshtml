@@ -1,0 +1,121 @@
+@page
+@model LoxoneSolarForecast.Pages.RecommendationsModel
+@{
+    ViewData["Title"] = "Energy Optimization";
+    var r = Model.Recommendations;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-lightning-charge text-warning me-2"></i>Energy Optimization</h4>
+    <small class="text-secondary">Auto-refreshes every 5 minutes</small>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-success">@r.ExpectedSurplusKwh.ToString("F1")</div>
+                <div class="small text-secondary">kWh Surplus Today</div>
+            </div>
+        </div>
+    </div>
+    @if (r.SurplusStartTime.HasValue)
+    {
+        <div class="col-6 col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-warning">@r.SurplusStartTime.Value.ToString(@"hh\:mm")</div>
+                    <div class="small text-secondary">Surplus Start</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-warning">@r.SurplusEndTime?.ToString(@"hh\:mm")</div>
+                    <div class="small text-secondary">Surplus End</div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (r.AvailableSolarForEvKwh > 0)
+    {
+        <div class="col-6 col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-info">@r.AvailableSolarForEvKwh.ToString("F1")</div>
+                    <div class="small text-secondary">kWh for EV</div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (r.BatteryFullTime.HasValue)
+    {
+        <div class="col-6 col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold">@r.BatteryFullTime.Value.ToLocalTime().ToString("HH:mm")</div>
+                    <div class="small text-secondary">Battery Full Est.</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Recommendation Cards -->
+<div class="row g-3">
+    @foreach (var rec in r.Recommendations)
+    {
+        var borderClass = rec.Priority switch
+        {
+            "High" => "border-warning",
+            "Low" => "border-secondary",
+            _ => "border-info"
+        };
+        var badgeClass = rec.Priority switch
+        {
+            "High" => "bg-warning text-dark",
+            "Low" => "bg-secondary",
+            _ => "bg-info text-dark"
+        };
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100 @borderClass">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi @rec.Icon fs-4 text-warning"></i>
+                            <h6 class="mb-0">@rec.Title</h6>
+                        </div>
+                        <span class="badge @badgeClass">@rec.Priority</span>
+                    </div>
+                    <p class="text-secondary mb-2">@rec.Description</p>
+                    @if (rec.StartTime.HasValue)
+                    {
+                        <div class="d-flex gap-3 small">
+                            <span><i class="bi bi-play-circle me-1 text-success"></i>@rec.StartTime.Value.ToLocalTime().ToString("HH:mm")</span>
+                            @if (rec.EndTime.HasValue)
+                            {
+                                <span><i class="bi bi-stop-circle me-1 text-danger"></i>@rec.EndTime.Value.ToLocalTime().ToString("HH:mm")</span>
+                            }
+                            @if (rec.SolarEnergyKwh.HasValue)
+                            {
+                                <span><i class="bi bi-lightning me-1 text-warning"></i>@rec.SolarEnergyKwh.Value.ToString("F1") kWh</span>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="card-footer text-secondary small">
+                    <i class="bi bi-tag me-1"></i>@rec.Category
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+// Auto-refresh every 5 minutes
+setTimeout(() => location.reload(), 300000);
+</script>
+}

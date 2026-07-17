@@ -1,0 +1,244 @@
+@page
+@model LoxoneSolarForecast.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["AppName"] = Model.Dashboard.ApplicationName;
+    var d = Model.Dashboard;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-speedometer2 text-warning me-2"></i>Solar Dashboard</h4>
+    <div class="d-flex align-items-center gap-3">
+        <small class="text-secondary">Last updated: @d.LastUpdated.ToLocalTime().ToString("HH:mm:ss")</small>
+        <button id="refreshBtn" class="btn btn-outline-warning btn-sm" onclick="refreshForecast()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Forecast
+        </button>
+    </div>
+</div>
+
+<!-- Status Badges -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+    <span class="badge @(d.LoxoneConnected ? "bg-success" : "bg-danger")">
+        <i class="bi bi-house-fill me-1"></i>Loxone @(d.LoxoneConnected ? "Online" : "Offline")
+    </span>
+    <span class="badge @(d.WeatherApiConnected ? "bg-success" : "bg-warning text-dark")">
+        <i class="bi bi-cloud me-1"></i>Weather API @(d.WeatherApiConnected ? "OK" : "Unavailable")
+    </span>
+    <span class="badge @(d.DatabaseConnected ? "bg-success" : "bg-danger")">
+        <i class="bi bi-database me-1"></i>Database @(d.DatabaseConnected ? "OK" : "Error")
+    </span>
+</div>
+
+<!-- KPI Cards Row 1 -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-warning h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Current solar output right now in kilowatts, read from Loxone every 5 minutes."></i>
+                <div class="fs-2 fw-bold text-warning">@((d.CurrentProductionWatts/1000).ToString("F2"))</div>
+                <div class="text-secondary small">kW Now</div>
+                <div class="small mt-1"><i class="bi bi-sun-fill text-warning me-1"></i>Production</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-info h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Total solar energy the forecast engine expects your panels to produce today (00:00–24:00), based on weather data and your panel configuration."></i>
+                <div class="fs-2 fw-bold text-info">@d.TodayForecastKwh.ToString("F1")</div>
+                <div class="text-secondary small">kWh</div>
+                <div class="small mt-1"><i class="bi bi-calendar-day me-1"></i>Today Forecast</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-secondary h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Forecasted total solar production for tomorrow, calculated from tomorrow's weather forecast."></i>
+                <div class="fs-2 fw-bold">@d.TomorrowForecastKwh.ToString("F1")</div>
+                <div class="text-secondary small">kWh</div>
+                <div class="small mt-1"><i class="bi bi-calendar2 me-1"></i>Tomorrow</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-primary h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="How much solar energy is still expected to be produced between now and midnight today."></i>
+                <div class="fs-2 fw-bold text-primary">@d.RemainingTodayKwh.ToString("F1")</div>
+                <div class="text-secondary small">kWh</div>
+                <div class="small mt-1"><i class="bi bi-hourglass-split me-1"></i>Remaining</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-success h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="How reliable this forecast is (0–100%). Confidence drops further into the future, with more cloud cover, and before the learning engine has enough data."></i>
+                <div class="fs-2 fw-bold text-success">@d.ConfidencePercent.ToString("F0")%</div>
+                <div class="text-secondary small">Accuracy</div>
+                <div class="small mt-1"><i class="bi bi-graph-up me-1"></i>Confidence</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <div class="card text-center border-danger h-100">
+            <div class="card-body py-3 position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Expected solar energy surplus today — production minus estimated household consumption. Use this to decide when to charge your EV or run appliances."></i>
+                <div class="fs-2 fw-bold text-danger">@d.ExpectedSurplusKwh.ToString("F1")</div>
+                <div class="text-secondary small">kWh</div>
+                <div class="small mt-1"><i class="bi bi-lightning-charge me-1"></i>Surplus</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row 2 -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body py-2 text-center position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Current household electricity consumption in kilowatts, read from Loxone."></i>
+                <div class="fs-4 fw-bold">@((d.CurrentConsumptionWatts/1000).ToString("F2")) kW</div>
+                <div class="small text-secondary"><i class="bi bi-house me-1"></i>Consumption</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body py-2 text-center position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Current battery state of charge in percent. 100% means fully charged."></i>
+                <div class="fs-4 fw-bold">@d.BatterySocPercent.ToString("F0")%</div>
+                <div class="small text-secondary"><i class="bi bi-battery-half me-1"></i>Battery SOC</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body py-2 text-center position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="Power currently being exported to the electricity grid. Positive = exporting surplus solar. Negative = importing from grid."></i>
+                <div class="fs-4 fw-bold">@((d.GridExportWatts/1000).ToString("F2")) kW</div>
+                <div class="small text-secondary"><i class="bi bi-plug me-1"></i>Grid Export</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body py-2 text-center position-relative">
+                <i class="bi bi-info-circle text-secondary position-absolute top-0 end-0 m-2"
+                   data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="The hour when solar production is expected to be highest today, and the forecasted peak power at that time."></i>
+                <div class="fs-4 fw-bold">@(d.PeakProductionTime.HasValue ? d.PeakProductionTime.Value.ToLocalTime().ToString("HH:mm") : "--:--")</div>
+                <div class="small text-secondary"><i class="bi bi-sun me-1"></i>Peak Time (@((d.PeakProductionWatts/1000).ToString("F1")) kW)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bar-chart me-2"></i>Today — Forecast vs Actual</span>
+                <span class="badge bg-secondary">Hourly (Wh)</span>
+            </div>
+            <div class="card-body">
+                <canvas id="hourlyChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-calendar3 me-2"></i>7-Day Forecast (kWh)</div>
+            <div class="card-body">
+                <canvas id="weeklyChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// Init Bootstrap tooltips
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el =>
+    new bootstrap.Tooltip(el, { trigger: 'hover' })
+);
+
+async function refreshForecast() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Refreshing...';
+    try {
+        const resp = await fetch('/api/forecast/refresh', { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Done!';
+            btn.className = 'btn btn-outline-success btn-sm';
+            setTimeout(() => location.reload(), 800);
+        } else {
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Failed';
+            btn.className = 'btn btn-outline-danger btn-sm';
+            btn.disabled = false;
+        }
+    } catch {
+        btn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Error';
+        btn.className = 'btn btn-outline-danger btn-sm';
+        btn.disabled = false;
+    }
+}
+
+const hourlyLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    d.HourlyForecast.Select(h => h.Time.ToLocalTime().ToString("HH:mm")).ToList()));
+const hourlyForecast = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    d.HourlyForecast.Select(h => Math.Round(h.Value, 1)).ToList()));
+const hourlyActual = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    d.HourlyActual.Select(h => Math.Round(h.Value, 1)).ToList()));
+
+const weeklyLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    d.DailyForecast.Select(x => x.Date.ToString("ddd dd/MM")).ToList()));
+const weeklyData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    d.DailyForecast.Select(x => Math.Round(x.ForecastedKwh, 2)).ToList()));
+
+Chart.defaults.color = '#adb5bd';
+
+new Chart(document.getElementById('hourlyChart'), {
+    type: 'bar',
+    data: {
+        labels: hourlyLabels,
+        datasets: [
+            { label: 'Forecast (Wh)', data: hourlyForecast, backgroundColor: 'rgba(255,193,7,0.6)', borderColor: '#ffc107', borderWidth: 1 },
+            { label: 'Actual (W)', data: hourlyActual, type: 'line', borderColor: '#0dcaf0', backgroundColor: 'rgba(13,202,240,0.1)', fill: true, tension: 0.3, pointRadius: 2 }
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { grid: { color: '#333' } }, y: { grid: { color: '#333' }, beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: {
+        labels: weeklyLabels,
+        datasets: [{ label: 'kWh', data: weeklyData, backgroundColor: 'rgba(255,193,7,0.7)', borderColor: '#ffc107', borderWidth: 1 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#333' } }, y: { grid: { color: '#333' }, beginAtZero: true } } }
+});
+</script>
+}

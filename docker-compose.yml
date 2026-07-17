@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  loxone-solar-forecast:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: loxone-solar-forecast:latest
+    container_name: loxone-solar-forecast
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    volumes:
+      - solar_config:/config
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
+      - Storage__ConfigPath=/config
+      # Override credentials via environment (Portainer secrets)
+      # - Auth__Username=admin
+      # - Auth__Password=your-secure-password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.portainer.accesscontrol.teams=solar"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  solar_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data

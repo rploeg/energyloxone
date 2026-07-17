@@ -1,0 +1,206 @@
+@page
+@model LoxoneSolarForecast.Pages.LocationModel
+@{
+    ViewData["Title"] = "Location";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-geo-alt-fill text-warning me-2"></i>Panel Location</h4>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" id="savedAlert">
+        @Model.StatusMessage — <span id="refreshStatus">refreshing forecast...</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-map me-2"></i>Select Panel Location</div>
+            <div class="card-body p-0">
+                <div id="map" style="height:500px; width:100%; border-radius: 0 0 0.375rem 0.375rem;"></div>
+            </div>
+            <div class="card-footer text-secondary small">
+                <i class="bi bi-info-circle me-1"></i>Click on the map to set the location of your solar panels. You can also search by address.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-search me-2"></i>Search Address</div>
+            <div class="card-body">
+                <div class="input-group mb-2">
+                    <input type="text" id="addressSearch" class="form-control" placeholder="Enter address..." />
+                    <button class="btn btn-outline-warning" type="button" id="searchBtn">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <div id="searchResults" class="list-group list-group-flush"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pin-map me-2"></i>Coordinates</div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Latitude</label>
+                        <input asp-for="Location.Latitude" id="latInput" type="number" step="0.000001" class="form-control font-monospace" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Longitude</label>
+                        <input asp-for="Location.Longitude" id="lngInput" type="number" step="0.000001" class="form-control font-monospace" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Elevation (m) <span class="text-secondary small">(optional)</span></label>
+                        <input asp-for="Location.Elevation" id="elevInput" type="number" step="1" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <input asp-for="Location.Address" id="addressInput" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-save me-2"></i>Save Location
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const initLat = @Model.Location.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+const initLng = @Model.Location.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+const map = L.map('map').setView([initLat || 52.3676, initLng || 4.9041], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+
+let marker = null;
+if (initLat && initLng) {
+    marker = L.marker([initLat, initLng]).addTo(map);
+    marker.bindPopup(`Lat: ${initLat}, Lng: ${initLng}`).openPopup();
+}
+
+function setLocation(lat, lng, address) {
+    document.getElementById('latInput').value = lat.toFixed(6);
+    document.getElementById('lngInput').value = lng.toFixed(6);
+    if (address) document.getElementById('addressInput').value = address;
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map);
+    marker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
+    fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`)
+        .then(r => r.json())
+        .then(d => { if (d.elevation) document.getElementById('elevInput').value = Math.round(d.elevation[0]); })
+        .catch(() => {});
+}
+
+map.on('click', e => setLocation(e.latlng.lat, e.latlng.lng, ''));
+document.getElementById('searchBtn').addEventListener('click', searchAddress);
+document.getElementById('addressSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); searchAddress(); }
+});
+
+async function searchAddress() {
+    const q = document.getElementById('addressSearch').value.trim();
+    if (!q) return;
+    const results = document.getElementById('searchResults');
+    results.innerHTML = '<div class="list-group-item text-secondary small">Searching...</div>';
+    try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`, {
+            headers: { 'Accept-Language': 'en' }
+        });
+        const data = await resp.json();
+        results.innerHTML = '';
+        if (!data.length) { results.innerHTML = '<div class="list-group-item text-secondary small">No results</div>'; return; }
+        data.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action list-group-item-dark small py-2';
+            btn.textContent = item.display_name;
+            btn.onclick = () => {
+                setLocation(parseFloat(item.lat), parseFloat(item.lon), item.display_name);
+                map.setView([item.lat, item.lon], 14);
+                results.innerHTML = '';
+                document.getElementById('addressSearch').value = '';
+            };
+            results.appendChild(btn);
+        });
+    } catch {
+        results.innerHTML = '<div class="list-group-item text-danger small">Search failed</div>';
+    }
+}
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    @:fetch('/api/forecast/refresh', { method: 'POST' })
+    @:    .then(() => { const s = document.getElementById('refreshStatus'); if (s) s.textContent = 'forecast updated! \u2713'; })
+    @:    .catch(() => {});
+}
+</script>
+}
+
+let marker = null;
+if (initLat && initLng) {
+    marker = L.marker([initLat, initLng]).addTo(map);
+    marker.bindPopup(`Lat: ${initLat}, Lng: ${initLng}`).openPopup();
+}
+
+function setLocation(lat, lng, address) {
+    document.getElementById('latInput').value = lat.toFixed(6);
+    document.getElementById('lngInput').value = lng.toFixed(6);
+    if (address) document.getElementById('addressInput').value = address;
+
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map);
+    marker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`).openPopup();
+
+    // Try to get elevation
+    fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`)
+        .then(r => r.json())
+        .then(d => { if (d.elevation) document.getElementById('elevInput').value = Math.round(d.elevation[0]); })
+        .catch(() => {});
+}
+
+map.on('click', e => setLocation(e.latlng.lat, e.latlng.lng, ''));
+
+document.getElementById('searchBtn').addEventListener('click', searchAddress);
+document.getElementById('addressSearch').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); searchAddress(); } });
+
+async function searchAddress() {
+    const q = document.getElementById('addressSearch').value.trim();
+    if (!q) return;
+    const results = document.getElementById('searchResults');
+    results.innerHTML = '<div class="list-group-item text-secondary small">Searching...</div>';
+    try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`, {
+            headers: { 'Accept-Language': 'en' }
+        });
+        const data = await resp.json();
+        results.innerHTML = '';
+        if (!data.length) { results.innerHTML = '<div class="list-group-item text-secondary small">No results</div>'; return; }
+        data.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action list-group-item-dark small py-2';
+            btn.textContent = item.display_name;
+            btn.onclick = () => {
+                setLocation(parseFloat(item.lat), parseFloat(item.lon), item.display_name);
+                map.setView([item.lat, item.lon], 14);
+                results.innerHTML = '';
+                document.getElementById('addressSearch').value = '';
+            };
+            results.appendChild(btn);
+        });
+    } catch {
+        results.innerHTML = '<div class="list-group-item text-danger small">Search failed</div>';
+    }
+}
+</script>
+}

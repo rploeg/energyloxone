@@ -1,0 +1,188 @@
+@page
+@model LoxoneSolarForecast.Pages.SolarArraysModel
+@{
+    ViewData["Title"] = "Solar Arrays";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-solar-panel text-warning me-2"></i>Solar Arrays</h4>
+    <form method="post">
+        <button type="submit" asp-page-handler="AddArray" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add Array
+        </button>
+    </form>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" id="savedAlert">
+        @Model.StatusMessage — <span id="refreshStatus">refreshing forecast...</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@* Delete forms — placed outside the save form to avoid invalid nested-form HTML *@
+@foreach (var arr in Model.Arrays)
+{
+    <form id="delete-@arr.Id" method="post" asp-page-handler="DeleteArray" style="display:none">
+        <input type="hidden" name="id" value="@arr.Id" />
+    </form>
+}
+
+<form method="post" asp-page-handler="Save" id="saveForm">
+    <div class="row g-4">
+        @for (int i = 0; i < Model.Arrays.Count; i++)
+        {
+            var arr = Model.Arrays[i];
+            <div class="col-12 col-xl-6">
+                <div class="card @(arr.IsActive ? "" : "opacity-50")">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <input asp-for="Arrays[i].IsActive" type="checkbox" class="form-check-input" />
+                            <input asp-for="Arrays[i].Name" class="form-control form-control-sm fw-bold" style="max-width:200px" />
+                        </div>
+                        <button type="submit" form="delete-@arr.Id"
+                                class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Delete this array?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <input type="hidden" asp-for="Arrays[i].Id" />
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small">Installed Power (Wp)</label>
+                                <input asp-for="Arrays[i].InstalledPowerWp" type="number" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">System Losses (%)</label>
+                                <input asp-for="Arrays[i].SystemLossesPercent" type="number" step="0.1" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Tilt Angle (°)</label>
+                                <input asp-for="Arrays[i].TiltDegrees" type="number" step="1" min="0" max="90" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Shading Factor (0–1)</label>
+                                <input asp-for="Arrays[i].ShadingFactor" type="number" step="0.01" min="0" max="1" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Orientation (Azimuth)</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <input asp-for="Arrays[i].AzimuthDegrees" type="range" class="form-range flex-grow-1" min="-180" max="180" step="5"
+                                           id="azimuth_@i" oninput="updateAzimuth(@i, this.value)" />
+                                    <input type="number" class="form-control form-control-sm" style="width:80px"
+                                           value="@arr.AzimuthDegrees" onchange="syncAzimuth(@i, this.value)" id="azimuthVal_@i" />
+                                </div>
+                                <div class="text-center mt-1">
+                                    <canvas id="compass_@i" width="80" height="80"></canvas>
+                                    <div class="small text-secondary" id="azimuthLabel_@i">@GetAzimuthLabel(arr.AzimuthDegrees)</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Module Type</label>
+                                <select asp-for="Arrays[i].ModuleType" class="form-select form-select-sm">
+                                    <option>Monocrystalline</option>
+                                    <option>Polycrystalline</option>
+                                    <option>Thin Film</option>
+                                    <option>Bifacial</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Inverter Type</label>
+                                <select asp-for="Arrays[i].InverterType" class="form-select form-select-sm">
+                                    <option>String Inverter</option>
+                                    <option>Micro Inverter</option>
+                                    <option>Power Optimizer</option>
+                                    <option>Hybrid Inverter</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-warning px-5">
+            <i class="bi bi-save me-2"></i>Save All Arrays
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+function getAzimuthLabel(deg) {
+    const d = parseFloat(deg);
+    if (d === 0) return 'South (0°)';
+    if (d === -90) return 'East (-90°)';
+    if (d === 90) return 'West (90°)';
+    if (d === 180 || d === -180) return 'North (180°)';
+    if (d > 0) return `SW–West (${d}°)`;
+    return `SE–East (${d}°)`;
+}
+
+function drawCompass(idx, deg) {
+    const canvas = document.getElementById('compass_' + idx);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = 40, cy = 40, r = 35;
+    ctx.clearRect(0, 0, 80, 80);
+    ctx.strokeStyle = '#555';
+    ctx.fillStyle = '#1a1a2e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    // N S E W labels
+    ctx.fillStyle = '#aaa'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('N', cx, cy - r + 10);
+    ctx.fillText('S', cx, cy + r - 4);
+    ctx.fillText('E', cx + r - 6, cy + 4);
+    ctx.fillText('W', cx - r + 6, cy + 4);
+    // Arrow: 0° = South, positive = West
+    const angle = (deg * Math.PI / 180);
+    const ax = cx + Math.sin(angle) * (r - 8);
+    const ay = cy + Math.cos(angle) * (r - 8);
+    ctx.strokeStyle = '#ffc107'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ax, ay); ctx.stroke();
+    ctx.fillStyle = '#ffc107';
+    ctx.beginPath(); ctx.arc(ax, ay, 4, 0, 2 * Math.PI); ctx.fill();
+}
+
+function updateAzimuth(idx, val) {
+    document.getElementById('azimuthVal_' + idx).value = val;
+    document.getElementById('azimuthLabel_' + idx).textContent = getAzimuthLabel(val);
+    drawCompass(idx, val);
+}
+
+function syncAzimuth(idx, val) {
+    document.getElementById('azimuth_' + idx).value = val;
+    document.getElementById('azimuthLabel_' + idx).textContent = getAzimuthLabel(val);
+    drawCompass(idx, val);
+}
+
+// Init all compasses
+@for (int i = 0; i < Model.Arrays.Count; i++)
+{
+    @:drawCompass(@i, @Model.Arrays[i].AzimuthDegrees);
+}
+
+// Auto-refresh forecast when arriving here after a save
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    @:fetch('/api/forecast/refresh', { method: 'POST' })
+    @:    .then(() => { document.getElementById('refreshStatus').textContent = 'forecast updated! ✓'; })
+    @:    .catch(() => { document.getElementById('refreshStatus').textContent = 'forecast refresh failed'; });
+}
+</script>
+}
+
+@functions {
+    string GetAzimuthLabel(double deg)
+    {
+        if (deg == 0) return "South (0°)";
+        if (deg == -90) return "East (-90°)";
+        if (deg == 90) return "West (90°)";
+        if (deg == 180 || deg == -180) return "North (180°)";
+        return $"{deg}°";
+    }
+}

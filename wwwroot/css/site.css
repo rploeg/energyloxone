@@ -1,0 +1,116 @@
+/* LoxoneSolarForecast Site Styles */
+
+:root {
+    --solar-orange: #ffc107;
+    --solar-blue: #0dcaf0;
+}
+
+body {
+    background-color: #0d1117;
+    color: #c9d1d9;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.card {
+    background-color: #161b22;
+    border-color: #30363d;
+}
+
+.card-header {
+    background-color: #1c2128;
+    border-bottom-color: #30363d;
+    font-weight: 500;
+}
+
+.card-footer {
+    background-color: #1c2128;
+    border-top-color: #30363d;
+}
+
+.table-dark {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: #30363d;
+}
+
+.table-dark td, .table-dark th {
+    border-color: #30363d;
+}
+
+.form-control, .form-select {
+    background-color: #0d1117;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #0d1117;
+    border-color: #ffc107;
+    color: #c9d1d9;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.15);
+}
+
+.list-group-item-dark {
+    background-color: #161b22;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+.list-group-item-action:hover {
+    background-color: #1c2128 !important;
+    color: #fff;
+}
+
+/* Solar panel animation */
+@keyframes pulse-yellow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.production-active .bi-sun-fill {
+    animation: pulse-yellow 2s infinite;
+}
+
+/* Chart area */
+canvas {
+    max-height: 400px;
+}
+
+/* Confidence badge gradient */
+.confidence-high { background: linear-gradient(135deg, #198754, #20c997); }
+.confidence-med  { background: linear-gradient(135deg, #ffc107, #fd7e14); color: #000; }
+.confidence-low  { background: linear-gradient(135deg, #dc3545, #fd7e14); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* Leaflet dark map overlay */
+.leaflet-container {
+    background: #161b22;
+}
+
+/* Font monospace improvements */
+.font-monospace {
+    font-size: 0.85em;
+}
+
+/* Nav active state */
+.nav-link.active {
+    color: #ffc107 !important;
+}
+
+/* Table condensed */
+.table-sm td, .table-sm th {
+    padding: 0.3rem 0.5rem;
+}
+
+/* Footer */
+footer {
+    background-color: #161b22;
+}

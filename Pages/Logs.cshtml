@@ -1,0 +1,126 @@
+@page
+@model LoxoneSolarForecast.Pages.LogsModel
+@{
+    ViewData["Title"] = "Logs";
+    var l = Model.LogData;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-journal-text text-warning me-2"></i>Application Logs</h4>
+    <span class="badge bg-secondary">@l.TotalCount.ToString("N0") entries</span>
+</div>
+
+<!-- Filters -->
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Level</label>
+                <select name="level" class="form-select form-select-sm">
+                    <option value="">All Levels</option>
+                    <option value="Information" selected="@(l.LevelFilter == "Information")">Information</option>
+                    <option value="Warning" selected="@(l.LevelFilter == "Warning")">Warning</option>
+                    <option value="Error" selected="@(l.LevelFilter == "Error")">Error</option>
+                    <option value="Debug" selected="@(l.LevelFilter == "Debug")">Debug</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small">Component</label>
+                <select name="component" class="form-select form-select-sm">
+                    <option value="">All Components</option>
+                    @foreach (var comp in l.AvailableComponents)
+                    {
+                        <option value="@comp" selected="@(l.ComponentFilter == comp)">@comp</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Date From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                       value="@l.DateFrom?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Date To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm"
+                       value="@l.DateTo?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-warning btn-sm flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i>Filter
+                </button>
+                <a asp-page="/Logs" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Log Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-sm table-hover mb-0" style="font-size:0.82rem">
+                <thead>
+                    <tr>
+                        <th style="width:140px">Timestamp</th>
+                        <th style="width:90px">Level</th>
+                        <th style="width:150px">Component</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!l.Logs.Any())
+                    {
+                        <tr><td colspan="4" class="text-center text-secondary py-4">No log entries found.</td></tr>
+                    }
+                    @foreach (var log in l.Logs)
+                    {
+                        var rowClass = log.Level switch
+                        {
+                            "Error" or "Fatal" => "table-danger",
+                            "Warning" => "table-warning",
+                            _ => ""
+                        };
+                        <tr class="@rowClass">
+                            <td class="text-nowrap font-monospace">@log.Timestamp.ToLocalTime().ToString("dd/MM HH:mm:ss")</td>
+                            <td>
+                                <span class="badge @(log.Level switch { "Error" or "Fatal" => "bg-danger", "Warning" => "bg-warning text-dark", "Information" => "bg-info text-dark", _ => "bg-secondary" })">
+                                    @log.Level
+                                </span>
+                            </td>
+                            <td class="text-secondary">@log.Component</td>
+                            <td>
+                                @log.Message
+                                @if (!string.IsNullOrEmpty(log.Exception))
+                                {
+                                    <div class="text-danger small font-monospace mt-1">@log.Exception</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (l.TotalCount > l.PageSize)
+    {
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span class="text-secondary small">Page @(l.PageIndex + 1) of @((int)Math.Ceiling((double)l.TotalCount / l.PageSize))</span>
+            <div class="btn-group btn-group-sm">
+                @if (l.PageIndex > 0)
+                {
+                    <a asp-page="/Logs" asp-route-page="@(l.PageIndex - 1)"
+                       asp-route-level="@l.LevelFilter" asp-route-component="@l.ComponentFilter"
+                       class="btn btn-outline-secondary">Previous</a>
+                }
+                @if ((l.PageIndex + 1) * l.PageSize < l.TotalCount)
+                {
+                    <a asp-page="/Logs" asp-route-page="@(l.PageIndex + 1)"
+                       asp-route-level="@l.LevelFilter" asp-route-component="@l.ComponentFilter"
+                       class="btn btn-outline-secondary">Next</a>
+                }
+            </div>
+        </div>
+    }
+</div>

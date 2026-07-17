@@ -1,0 +1,180 @@
+@page
+@model LoxoneSolarForecast.Pages.MonitoringModel
+@{
+    ViewData["Title"] = "Monitoring";
+    var m = Model.Monitoring;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-heart-pulse text-warning me-2"></i>System Monitoring</h4>
+    <small class="text-secondary">@DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm") UTC</small>
+</div>
+
+<div class="row g-4">
+    <!-- Scheduler Status -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock me-2"></i>Scheduler Status</div>
+            <div class="card-body">
+                <table class="table table-sm table-dark mb-0">
+                    <tbody>
+                        <tr>
+                            <td>Data Collection Interval</td>
+                            <td><span class="badge bg-info">@m.SchedulerStatus.DataCollectionIntervalMinutes min</span></td>
+                        </tr>
+                        <tr>
+                            <td>Data Collection</td>
+                            <td>
+                                @if (m.SchedulerStatus.DataCollectionRunning)
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-arrow-repeat me-1"></i>Running</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Idle</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Last Data Collection</td>
+                            <td>@(m.SchedulerStatus.LastDataCollection.HasValue ? m.SchedulerStatus.LastDataCollection.Value.ToLocalTime().ToString("HH:mm:ss dd/MM") : "—")</td>
+                        </tr>
+                        <tr>
+                            <td>Next Data Collection</td>
+                            <td>@(m.SchedulerStatus.NextDataCollection.HasValue ? m.SchedulerStatus.NextDataCollection.Value.ToLocalTime().ToString("HH:mm:ss") : "—")</td>
+                        </tr>
+                        <tr>
+                            <td>Forecast Engine</td>
+                            <td>
+                                @if (m.SchedulerStatus.ForecastRunning)
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-arrow-repeat me-1"></i>Running</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Idle</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Last Forecast</td>
+                            <td>@(m.SchedulerStatus.LastForecastGeneration.HasValue ? m.SchedulerStatus.LastForecastGeneration.Value.ToLocalTime().ToString("HH:mm:ss dd/MM") : "—")</td>
+                        </tr>
+                        <tr>
+                            <td>Last Loxone Push</td>
+                            <td>@(m.SchedulerStatus.LastLoxonePush.HasValue ? m.SchedulerStatus.LastLoxonePush.Value.ToLocalTime().ToString("HH:mm:ss dd/MM") : "—")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Health -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-wifi me-2"></i>Connection Health</div>
+            <div class="card-body">
+                @{
+                    var connections = new[]
+                    {
+                        ("Weather API (Open-Meteo)", m.ConnectionHealth.WeatherApi, m.ConnectionHealth.WeatherApiLastCheck, m.ConnectionHealth.WeatherApiError),
+                        ("PVGIS API", m.ConnectionHealth.PvgisApi, (DateTime?)null, (string?)null),
+                        ("Loxone", m.ConnectionHealth.Loxone, m.ConnectionHealth.LoxoneLastCheck, m.ConnectionHealth.LoxoneError),
+                        ("Database", m.ConnectionHealth.Database, (DateTime?)null, (string?)null),
+                    };
+                }
+                @foreach (var (name, ok, lastCheck, error) in connections)
+                {
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary">
+                        <div>
+                            <span class="@(ok ? "text-success" : "text-danger") me-2"><i class="bi @(ok ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i></span>
+                            <span>@name</span>
+                            @if (!ok && !string.IsNullOrEmpty(error))
+                            {
+                                <div class="small text-danger ms-4">@error</div>
+                            }
+                        </div>
+                        <div class="text-secondary small">
+                            @if (lastCheck.HasValue) { <span>@lastCheck.Value.ToLocalTime().ToString("HH:mm")</span> }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-graph-up me-2"></i>System Statistics</div>
+            <div class="card-body">
+                <table class="table table-sm table-dark mb-0">
+                    <tbody>
+                        <tr>
+                            <td>Forecast Accuracy</td>
+                            <td>
+                                <div class="progress" style="height:20px; min-width:120px">
+                                    <div class="progress-bar bg-success" style="width:@((int)m.Statistics.ForecastAccuracyPercent)%">@m.Statistics.ForecastAccuracyPercent.ToString("F1")%</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Learning Correction Factor</td>
+                            <td><span class="badge @(m.Statistics.LearningCorrectionFactor >= 0.95 ? "bg-success" : "bg-warning text-dark")">@m.Statistics.LearningCorrectionFactor.ToString("F3")</span></td>
+                        </tr>
+                        <tr>
+                            <td>Avg Daily Production (30d)</td>
+                            <td>@m.Statistics.AverageDailyProductionKwh.ToString("F2") kWh</td>
+                        </tr>
+                        <tr>
+                            <td>Avg Daily Consumption (30d)</td>
+                            <td>@m.Statistics.AverageDailyConsumptionKwh.ToString("F2") kWh</td>
+                        </tr>
+                        <tr>
+                            <td>Total Data Points</td>
+                            <td>@m.Statistics.TotalDataPoints.ToString("N0")</td>
+                        </tr>
+                        <tr>
+                            <td>Total Forecasts Generated</td>
+                            <td>@m.Statistics.TotalForecasts.ToString("N0")</td>
+                        </tr>
+                        <tr>
+                            <td>Data Since</td>
+                            <td>@(m.Statistics.DataSince.HasValue ? m.Statistics.DataSince.Value.ToString("dd/MM/yyyy") : "No data yet")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-activity me-2"></i>Recent Loxone Push Activity</div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @if (!m.RecentActivities.Any())
+                    {
+                        <li class="list-group-item list-group-item-dark text-secondary">No recent activity</li>
+                    }
+                    @foreach (var activity in m.RecentActivities.Take(15))
+                    {
+                        <li class="list-group-item list-group-item-dark py-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="@(activity.IsError ? "text-danger" : "text-success") me-2">
+                                        <i class="bi @(activity.IsError ? "bi-exclamation-circle" : "bi-check-circle")"></i>
+                                    </span>
+                                    <span class="small">@activity.Message</span>
+                                </div>
+                                <small class="text-secondary text-nowrap ms-2">@activity.Timestamp.ToLocalTime().ToString("HH:mm:ss")</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

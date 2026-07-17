@@ -1,0 +1,345 @@
+@page
+@model LoxoneSolarForecast.Pages.ConfigurationModel
+@{
+    ViewData["Title"] = "Configuration";
+    ViewData["AppName"] = Model.Config.General.ApplicationName;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-sliders text-warning me-2"></i>Configuration</h4>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert @(Model.IsError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form method="post">
+    <div class="row g-4">
+        <!-- General Settings -->
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-gear me-2"></i>General Settings</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Application Name</label>
+                        <input asp-for="Config.General.ApplicationName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <input asp-for="Config.General.Timezone" class="form-control" placeholder="Europe/Amsterdam" />
+                        <div class="form-text">IANA timezone name (e.g. Europe/Amsterdam, America/New_York)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Update Interval (minutes)</label>
+                        <input asp-for="Config.General.UpdateIntervalMinutes" type="number" class="form-control" min="1" max="60" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Forecast Horizon (days)</label>
+                        <input asp-for="Config.General.ForecastHorizonDays" type="number" class="form-control" min="1" max="7" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.General.EnableLearningEngine" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Learning Engine</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.General.EnableRecommendations" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Recommendations</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.General.EnableLogging" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Logging</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loxone Settings -->
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-house-fill me-2"></i>Loxone Settings</div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-8">
+                            <label class="form-label">IP Address</label>
+                            <input asp-for="Config.Loxone.IpAddress" class="form-control" placeholder="192.168.1.100" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Port</label>
+                            <input asp-for="Config.Loxone.Port" type="number" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input asp-for="Config.Loxone.Username" class="form-control" autocomplete="off" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input asp-for="Config.Loxone.Password" type="password" class="form-control" autocomplete="off" />
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Loxone.EnablePull" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Enable Data Pull</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Loxone.EnablePush" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label">Enable Push to Loxone</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="testBtn" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-wifi me-1"></i>Test Connection
+                    </button>
+                    <span id="testResult" class="ms-2 small"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- InfluxDB Settings -->
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-database me-2"></i>InfluxDB Settings</div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="Config.InfluxDB.EnableInfluxDB" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label">Enable InfluxDB</label>
+                        <div class="form-text">Store historical data in InfluxDB for better time-series querying</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">InfluxDB URL</label>
+                        <input asp-for="Config.InfluxDB.Url" class="form-control" placeholder="http://172.16.1.47:8086" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Organization</label>
+                        <input asp-for="Config.InfluxDB.Organization" class="form-control" placeholder="myorg" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bucket Name</label>
+                        <input asp-for="Config.InfluxDB.Bucket" class="form-control" placeholder="Loxone" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Token</label>
+                        <input asp-for="Config.InfluxDB.Token" type="password" class="form-control" autocomplete="off" placeholder="Paste your InfluxDB API token" />
+                        <div class="form-text small">Create a token in InfluxDB with write access to your bucket</div>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="Config.InfluxDB.WriteForecasts" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label">Write Forecasts to InfluxDB</label>
+                        <div class="form-text small">Store hourly and daily forecast data in InfluxDB for analytics and Grafana dashboards</div>
+                    </div>
+                    <button type="button" id="testInfluxBtn" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-wifi me-1"></i>Test Connection
+                    </button>
+                    <span id="testInfluxResult" class="ms-2 small"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loxone Data Sources -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-arrow-down-circle me-2"></i>Loxone Data Sources (Pull)</div>
+                <div class="card-body">
+                    <p class="text-secondary small mb-3">Configure which Loxone virtual inputs to read. Use <code>{loxone}</code> as placeholder for IP:Port.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Active</th>
+                                    <th>Name</th>
+                                    <th>URL</th>
+                                    <th>Type</th>
+                                    <th>Unit</th>
+                                    <th title="How often to collect data from this source">Interval (min)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Config.LoxoneDataSources.Count; i++)
+                                {
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="hidden" asp-for="Config.LoxoneDataSources[i].Id" />
+                                            <input asp-for="Config.LoxoneDataSources[i].IsActive" type="checkbox" class="form-check-input" />
+                                        </td>
+                                        <td><input asp-for="Config.LoxoneDataSources[i].Name" class="form-control form-control-sm" /></td>
+                                        <td><input asp-for="Config.LoxoneDataSources[i].Url" class="form-control form-control-sm font-monospace" /></td>
+                                        <td><input asp-for="Config.LoxoneDataSources[i].DataType" class="form-control form-control-sm" /></td>
+                                        <td><input asp-for="Config.LoxoneDataSources[i].Unit" class="form-control form-control-sm" style="width:60px" /></td>
+                                        <td><input asp-for="Config.LoxoneDataSources[i].UpdateIntervalMinutes" type="number" class="form-control form-control-sm" style="width:80px" min="1" max="60" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loxone Push Targets -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-arrow-up-circle me-2"></i>Loxone Push Targets (Virtual HTTP Inputs)</div>
+                <div class="card-body">
+                    <p class="text-secondary small mb-3">Use <code>{loxone}</code> for IP:Port and <code>{value}</code> for the pushed value.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Active</th>
+                                    <th>Name</th>
+                                    <th>Data Key</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Config.LoxonePushTargets.Count; i++)
+                                {
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="hidden" asp-for="Config.LoxonePushTargets[i].Id" />
+                                            <input asp-for="Config.LoxonePushTargets[i].IsActive" type="checkbox" class="form-check-input" />
+                                        </td>
+                                        <td><input asp-for="Config.LoxonePushTargets[i].Name" class="form-control form-control-sm" /></td>
+                                        <td><input asp-for="Config.LoxonePushTargets[i].DataKey" class="form-control form-control-sm" /></td>
+                                        <td><input asp-for="Config.LoxonePushTargets[i].Url" class="form-control form-control-sm font-monospace" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-bell me-2"></i>Notifications</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch mb-2">
+                            <input asp-for="Config.Notifications.EnableEmail" class="form-check-input" type="checkbox" />
+                            <label class="form-check-label fw-bold">Enable Email</label>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-8"><input asp-for="Config.Notifications.SmtpHost" class="form-control form-control-sm" placeholder="smtp.example.com" /></div>
+                            <div class="col-4"><input asp-for="Config.Notifications.SmtpPort" type="number" class="form-control form-control-sm" /></div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><input asp-for="Config.Notifications.SmtpUsername" class="form-control form-control-sm" placeholder="Username" /></div>
+                            <div class="col-6"><input asp-for="Config.Notifications.SmtpPassword" type="password" class="form-control form-control-sm" placeholder="Password" /></div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6"><input asp-for="Config.Notifications.FromAddress" class="form-control form-control-sm" placeholder="from@example.com" /></div>
+                            <div class="col-6"><input asp-for="Config.Notifications.ToAddress" class="form-control form-control-sm" placeholder="to@example.com" /></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch mb-2">
+                            <input asp-for="Config.Notifications.EnableWebhook" class="form-check-input" type="checkbox" />
+                            <label class="form-check-label fw-bold">Enable Webhook</label>
+                        </div>
+                        <input asp-for="Config.Notifications.WebhookUrl" class="form-control form-control-sm" placeholder="https://hooks.example.com/..." />
+                    </div>
+                    <div class="row row-cols-2 g-2">
+                        <div class="col">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Notifications.NotifyForecastFailure" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label small">Forecast Failure</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Notifications.NotifyLoxoneOffline" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label small">Loxone Offline</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Notifications.NotifyWeatherApiUnavailable" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label small">Weather API Down</label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-check form-switch">
+                                <input asp-for="Config.Notifications.NotifyDatabaseIssues" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label small">Database Issues</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-warning btn-lg px-5">
+            <i class="bi bi-save me-2"></i>Save Configuration
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+document.getElementById('testBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('testBtn');
+    const result = document.getElementById('testResult');
+    btn.disabled = true;
+    result.textContent = 'Testing...';
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                   || document.querySelector('meta[name="csrf-token"]')?.content
+                   || '';
+        const resp = await fetch('?handler=TestConnection', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token }
+        });
+        const data = await resp.json();
+        result.textContent = data.message;
+        result.className = 'ms-2 small ' + (data.success ? 'text-success' : 'text-danger');
+    } catch {
+        result.textContent = 'Request failed';
+        result.className = 'ms-2 small text-danger';
+    }
+    btn.disabled = false;
+});
+
+document.getElementById('testInfluxBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('testInfluxBtn');
+    const result = document.getElementById('testInfluxResult');
+    btn.disabled = true;
+    result.textContent = 'Testing...';
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                   || document.querySelector('meta[name="csrf-token"]')?.content
+                   || '';
+        const resp = await fetch('?handler=TestInflux', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token }
+        });
+        const data = await resp.json();
+        result.textContent = data.message;
+        result.className = 'ms-2 small ' + (data.success ? 'text-success' : 'text-danger');
+    } catch (e) {
+        result.textContent = 'Request failed: ' + e.message;
+        result.className = 'ms-2 small text-danger';
+    }
+    btn.disabled = false;
+});
+</script>
+}

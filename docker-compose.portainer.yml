@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  loxone-solar-forecast:
+    image: loxone-solar-forecast:latest
+    container_name: loxone-solar-forecast
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - solar-forecast-config:/config
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
+    networks:
+      - loxone-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  solar-forecast-config:
+    driver: local
+
+networks:
+  loxone-network:
+    driver: bridge
