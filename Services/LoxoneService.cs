@@ -275,7 +275,31 @@ public class LoxoneService : ILoxoneService
 
             var response = await client.GetStringAsync(url);
 
-            // Loxone returns JSON like: {"LL":{"value":"123.45",...}}
+            // Try XML first (Loxone default format): <LL control="..." value="123.45" Code="200"/>
+            if (response.TrimStart().StartsWith("<"))
+            {
+                try
+                {
+                    var xmlDoc = new System.Xml.XmlDocument();
+                    xmlDoc.LoadXml(response);
+                    var root = xmlDoc.DocumentElement;
+                    
+                    if (root?.Name == "LL" && root.GetAttribute("value") is string xmlValue && !string.IsNullOrEmpty(xmlValue))
+                    {
+                        if (double.TryParse(xmlValue, System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                        {
+                            return parsed;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Fall through to JSON parsing
+                }
+            }
+
+            // Try JSON format: {"LL":{"value":"123.45",...}}
             using var doc = JsonDocument.Parse(response);
             if (doc.RootElement.TryGetProperty("LL", out var ll) &&
                 ll.TryGetProperty("value", out var val))
