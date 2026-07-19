@@ -77,6 +77,10 @@ public class InfluxDBService : IInfluxDBService
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("InfluxDB write failed: {StatusCode} to {Url} - {Error}", response.StatusCode, writeUrl, errorContent);
             }
+            else
+            {
+                _logger.LogDebug("InfluxDB write success ({StatusCode}): {LineProtocol}", response.StatusCode, lineProtocol);
+            }
         }
         catch (Exception ex)
         {

@@ -127,14 +127,20 @@ public class LoxoneService : ILoxoneService
                         // When negative, it's export - store in GridHistory
                         if (value.Value < 0)
                         {
+                            var exportWatts = Math.Abs(value.Value);
                             await db.GridHistory.AddAsync(new GridHistory
                             {
                                 Timestamp = now,
-                                ExportWatts = Math.Abs(value.Value),
+                                ExportWatts = exportWatts,
                                 ImportWatts = 0,
                                 Source = source.Name,
                             });
-                            await _influxDBService.WriteGridExportAsync(Math.Abs(value.Value), 0, source.Name);
+                            await _influxDBService.WriteGridExportAsync(exportWatts, 0, source.Name);
+                            _logger.LogDebug("Wrote Grid Export to InfluxDB: {SourceName} = {ExportWatts} W", source.Name, exportWatts);
+                        }
+                        else if (value.Value == 0)
+                        {
+                            _logger.LogDebug("Consumption/Grid: {SourceName} = 0 W (no export or import)", source.Name);
                         }
                         break;
 
