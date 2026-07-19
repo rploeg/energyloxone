@@ -35,3 +35,7 @@ services:
 volumes:
   solar_config:
     driver: local
+    external: true
+    # Note: This volume must be created manually on the Docker host before deployment
+    # To create it manually, run on the host:
+    # docker volume create solar_config
