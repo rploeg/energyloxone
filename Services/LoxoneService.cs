@@ -75,8 +75,16 @@ public class LoxoneService : ILoxoneService
         {
             try
             {
-                var url = source.Url
-                    .Replace("{loxone}", $"http://{config.Loxone.IpAddress}:{config.Loxone.Port}");
+                // Handle URLs that are already fully formed vs. template URLs
+                var url = source.Url.StartsWith("http://") || source.Url.StartsWith("https://")
+                    ? source.Url
+                    : source.Url.Replace("{loxone}", $"http://{config.Loxone.IpAddress}:{config.Loxone.Port}");
+
+                // Clean up any double http:// (from corrupted URLs)
+                while (url.Contains("http://http://"))
+                {
+                    url = url.Replace("http://http://", "http://");
+                }
 
                 var value = await ReadValueAsync(url, config.Loxone.Username, config.Loxone.Password);
                 if (value == null)
