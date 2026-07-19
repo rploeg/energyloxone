@@ -1,11 +1,11 @@
 services:
   loxone-solar-forecast:
     platform: linux/amd64
-    image: loxone-solar-forecast:latest
-    container_name: loxone-solar-forecast
+    # Build locally from Dockerfile - Portainer will build this when deployed from git
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: loxone-solar-forecast
     ports:
       - "5001:5000"
     volumes:

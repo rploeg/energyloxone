@@ -28,9 +28,6 @@ A **production-ready, self-hosted Solar Energy Intelligence platform** for [Loxo
 ### Docker Compose (Recommended)
 
 ```bash
-# Create data directory for persistence
-mkdir -p data
-
 # Build and start
 docker compose up -d --build
 
@@ -51,7 +48,7 @@ dotnet run
 
 ## Configuration
 
-All settings are persisted in `/config/settings.json` inside the container (mapped to `./data/`).
+All settings are persisted in `/config/settings.json` inside the container (stored in the `solar_config` Docker volume).
 
 ### First-Run Setup
 

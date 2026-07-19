@@ -14,6 +14,7 @@ public interface IInfluxDBService
     Task WriteForecastAsync(double forecastedWh, double confidencePercent, DateTime forecastHour, double peakW);
     Task WriteDailyForecastAsync(double forecastedWh, double confidencePercent, DateTime forecastDay);
     Task<bool> TestConnectionAsync();
+    Task<(bool Success, string Message)> TestWriteAsync();
 }
 
 public class InfluxDBService : IInfluxDBService
@@ -54,10 +55,16 @@ public class InfluxDBService : IInfluxDBService
         try
         {
             if (!settings.EnableInfluxDB)
+            {
+                _logger.LogDebug("InfluxDB write skipped: InfluxDB is disabled");
                 return;
+            }
 
             if (string.IsNullOrWhiteSpace(settings.Url) || string.IsNullOrWhiteSpace(settings.Bucket))
+            {
+                _logger.LogWarning("InfluxDB write skipped: URL or Bucket is empty. Url='{Url}', Bucket='{Bucket}'", settings.Url, settings.Bucket);
                 return;
+            }
 
             await AuthenticateAsync(settings);
 
@@ -68,12 +75,12 @@ public class InfluxDBService : IInfluxDBService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning($"InfluxDB write failed: {response.StatusCode} - {errorContent}");
+                _logger.LogWarning("InfluxDB write failed: {StatusCode} to {Url} - {Error}", response.StatusCode, writeUrl, errorContent);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error writing to InfluxDB");
+            _logger.LogError(ex, "Error writing to InfluxDB. Org={Org}, Bucket={Bucket}", settings.Organization, settings.Bucket);
         }
     }
 
@@ -158,6 +165,51 @@ public class InfluxDBService : IInfluxDBService
         {
             _logger.LogWarning(ex, "InfluxDB connection test failed");
             return false;
+        }
+    }
+
+    public async Task<(bool Success, string Message)> TestWriteAsync()
+    {
+        try
+        {
+            var config = _configService.GetConfiguration();
+            var settings = config.InfluxDB;
+
+            if (!settings.EnableInfluxDB)
+                return (false, "InfluxDB is disabled in configuration.");
+
+            if (string.IsNullOrWhiteSpace(settings.Url))
+                return (false, "InfluxDB URL is empty.");
+
+            if (string.IsNullOrWhiteSpace(settings.Organization))
+                return (false, "InfluxDB Organization is empty.");
+
+            if (string.IsNullOrWhiteSpace(settings.Bucket))
+                return (false, "InfluxDB Bucket is empty.");
+
+            if (string.IsNullOrWhiteSpace(settings.Token))
+                return (false, "InfluxDB API Token is empty.");
+
+            await AuthenticateAsync(settings);
+
+            var writeUrl = GetWriteUrl(settings);
+            var timestamp = GetUnixNanoseconds();
+            var lineProtocol = $"connectivity_test,source=LoxoneSolarForecast value=1i {timestamp}";
+            var content = new StringContent(lineProtocol, System.Text.Encoding.UTF8, "text/plain");
+
+            var response = await _httpClient.PostAsync(writeUrl, content);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return (false, $"Write test failed: {(int)response.StatusCode} {response.StatusCode} - {errorContent}");
+            }
+
+            return (true, $"Write test succeeded to org '{settings.Organization}', bucket '{settings.Bucket}'.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "InfluxDB write test failed");
+            return (false, $"Write test exception: {ex.Message}");
         }
     }
 

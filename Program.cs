@@ -179,6 +179,25 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
+    // ─────────────────────────────────────────────
+    // Startup Diagnostics
+    // ─────────────────────────────────────────────
+    using (var scope = app.Services.CreateScope())
+    {
+        var configService = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
+        var config = configService.GetConfiguration();
+        Log.Information("===== LoxoneSolarForecast Startup Diagnostics =====");
+        Log.Information("Loxone IP: {LoxoneIp}, Port: {Port}, Pull: {EnablePull}", 
+            config.Loxone.IpAddress, config.Loxone.Port, config.Loxone.EnablePull);
+        Log.Information("InfluxDB Enabled: {EnableInfluxDB}, Url: {InfluxUrl}, Org: {Org}, Bucket: {Bucket}", 
+            config.InfluxDB.EnableInfluxDB, config.InfluxDB.Url, config.InfluxDB.Organization, config.InfluxDB.Bucket);
+        Log.Information("Solar Arrays configured: {Count}, Location: ({Lat}, {Lon})", 
+            config.Solar.Arrays.Count, config.Location.Latitude, config.Location.Longitude);
+        Log.Information("Active Loxone Data Sources: {Sources}", 
+            string.Join(", ", config.LoxoneDataSources.Where(ds => ds.IsActive).Select(s => $"{s.Name}({s.DataType})")));
+        Log.Information("=====================================================");
+    }
+
     Log.Information("LoxoneSolarForecast starting on port {Port}",
         builder.Configuration["ASPNETCORE_URLS"] ?? "5000");
 

@@ -59,7 +59,13 @@ public class LoxoneService : ILoxoneService
         }
 
         var dataSources = config.LoxoneDataSources.Where(ds => ds.IsActive).ToList();
-        if (!dataSources.Any()) return;
+        if (!dataSources.Any())
+        {
+            _logger.LogWarning("No active Loxone data sources configured. Total sources: {Total}", config.LoxoneDataSources.Count);
+            return;
+        }
+
+        _logger.LogDebug("Active Loxone data sources: {Sources}", string.Join(", ", dataSources.Select(s => $"{s.Name}({s.DataType})")));
 
         using var db = await _dbFactory.CreateDbContextAsync();
         var now = DateTime.UtcNow;
@@ -73,13 +79,18 @@ public class LoxoneService : ILoxoneService
                     .Replace("{loxone}", $"http://{config.Loxone.IpAddress}:{config.Loxone.Port}");
 
                 var value = await ReadValueAsync(url, config.Loxone.Username, config.Loxone.Password);
-                if (value == null) continue;
+                if (value == null)
+                {
+                    _logger.LogDebug("No value returned from {SourceName} ({DataType}) at {Url}", source.Name, source.DataType, url);
+                    continue;
+                }
 
                 anySuccess = true;
 
                 switch (source.DataType)
                 {
                     case "PVProduction":
+                        _logger.LogDebug("PVProduction: {SourceName} = {Value} W", source.Name, value.Value);
                         await db.ProductionHistory.AddAsync(new ProductionHistory
                         {
                             Timestamp = now,
@@ -87,11 +98,13 @@ public class LoxoneService : ILoxoneService
                             Source = source.Name,
                         });
                         await _influxDBService.WriteProductionAsync(value.Value, source.Name);
+                        _logger.LogDebug("Wrote PVProduction to InfluxDB: {SourceName}", source.Name);
                         break;
 
                     case "Consumption":
                         // P1 meter: positive = consumption, negative = export
                         // Only count positive values as consumption
+                        _logger.LogDebug("Consumption reading: {SourceName} = {Value} W", source.Name, value.Value);
                         if (value.Value > 0)
                         {
                             await db.ConsumptionHistory.AddAsync(new ConsumptionHistory
@@ -101,6 +114,7 @@ public class LoxoneService : ILoxoneService
                                 Source = source.Name,
                             });
                             await _influxDBService.WriteConsumptionAsync(value.Value, source.Name);
+                            _logger.LogDebug("Wrote Consumption to InfluxDB: {SourceName}", source.Name);
                         }
                         // When negative, it's export - store in GridHistory
                         if (value.Value < 0)

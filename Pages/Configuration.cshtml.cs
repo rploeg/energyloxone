@@ -80,10 +80,10 @@ public class ConfigurationModel : PageModel
     {
         try
         {
-            var success = await influxDBService.TestConnectionAsync();
+            var result = await influxDBService.TestWriteAsync();
             return new JsonResult(new { 
-                success, 
-                message = success ? "InfluxDB connected!" : "InfluxDB connection failed. Check URL, credentials, and network connectivity." 
+                success = result.Success,
+                message = result.Message
             });
         }
         catch (Exception ex)

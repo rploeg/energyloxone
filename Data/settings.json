@@ -1,0 +1,144 @@
+{
+  "General": {
+    "ApplicationName": "LoxoneSolarForecast",
+    "Timezone": "Europe/Amsterdam",
+    "UpdateIntervalMinutes": 5,
+    "ForecastIntervalMinutes": 60,
+    "WeatherUpdateIntervalMinutes": 60,
+    "ForecastHorizonDays": 7,
+    "EnableLearningEngine": true,
+    "EnableRecommendations": true,
+    "EnableLogging": true
+  },
+  "Loxone": {
+    "IpAddress": "172.16.1.174",
+    "Port": 80,
+    "Username": "familyplanner",
+    "Password": "U8m8f4c7706",
+    "EnablePush": false,
+    "EnablePull": true
+  },
+  "InfluxDB": {
+    "EnableInfluxDB": true,
+    "Url": "http://172.16.1.47:8086",
+    "Organization": "myorg",
+    "Bucket": "loxone",
+    "Token": "SZqz4P0mlCLEfpsskeHEPibPSjLfWhiyr_YQKMFSuSvcYNJ6PK1XoBknKxFotRizpJTodOniculq0m7mr57-Zg==",
+    "WriteForecasts": true
+  },
+  "Solar": {
+    "Arrays": []
+  },
+  "Location": {
+    "Latitude": 52.3676,
+    "Longitude": 4.9041,
+    "Elevation": null,
+    "Address": ""
+  },
+  "Notifications": {
+    "EnableEmail": false,
+    "SmtpHost": null,
+    "SmtpPort": 587,
+    "SmtpUsername": null,
+    "SmtpPassword": null,
+    "FromAddress": null,
+    "ToAddress": null,
+    "EnableWebhook": false,
+    "WebhookUrl": null,
+    "NotifyForecastFailure": true,
+    "NotifyLoxoneOffline": true,
+    "NotifyWeatherApiUnavailable": true,
+    "NotifyDatabaseIssues": true
+  },
+  "LoxoneDataSources": [
+    {
+      "Id": "ef00c50f-a3ae-4cc9-857b-60a437da9fb8",
+      "Name": "PV Production",
+      "Url": "{loxone}/jdev/sps/io/Zonnepanelen",
+      "DataType": "PVProduction",
+      "Unit": "W",
+      "IsActive": true,
+      "UpdateIntervalMinutes": 1
+    },
+    {
+      "Id": "cbeb25bf-ef88-4128-8fb4-2945d09a89cb",
+      "Name": "House Consumption",
+      "Url": "{loxone}/jdev/sps/io/P1 meter",
+      "DataType": "Consumption",
+      "Unit": "W",
+      "IsActive": true,
+      "UpdateIntervalMinutes": 1
+    },
+    {
+      "Id": "c7d9a6d6-5bfb-42d6-9274-72f6131fd94a",
+      "Name": "Battery SOC",
+      "Url": "{loxone}/dev/sps/io/BatterySOC",
+      "DataType": "BatterySOC",
+      "Unit": "%",
+      "IsActive": false,
+      "UpdateIntervalMinutes": 5
+    },
+    {
+      "Id": "ea53ef7d-7429-4de8-9bd4-43a1dee03cae",
+      "Name": "Battery Power",
+      "Url": "{loxone}/dev/sps/io/BatteryPower",
+      "DataType": "BatteryPower",
+      "Unit": "W",
+      "IsActive": false,
+      "UpdateIntervalMinutes": 5
+    },
+    {
+      "Id": "ac631541-1cfd-4cb3-a60e-8b4722465dde",
+      "Name": "Grid Export",
+      "Url": "{loxone}/dev/sps/io/GridExport",
+      "DataType": "GridExport",
+      "Unit": "W",
+      "IsActive": false,
+      "UpdateIntervalMinutes": 5
+    }
+  ],
+  "LoxonePushTargets": [
+    {
+      "Id": "29144911-a2b1-4572-97eb-78d9887ddb8b",
+      "Name": "Solar Forecast Today",
+      "Url": "{loxone}/dev/sps/io/SolarForecastToday/{value}",
+      "DataKey": "SolarForecastToday",
+      "IsActive": false
+    },
+    {
+      "Id": "73b725dc-9b48-46aa-b816-3be731579848",
+      "Name": "Solar Forecast Tomorrow",
+      "Url": "{loxone}/dev/sps/io/SolarForecastTomorrow/{value}",
+      "DataKey": "SolarForecastTomorrow",
+      "IsActive": false
+    },
+    {
+      "Id": "8e99030f-0e7f-4a13-a7ec-dee4159d02c7",
+      "Name": "Solar Remaining Today",
+      "Url": "{loxone}/dev/sps/io/SolarRemainingToday/{value}",
+      "DataKey": "SolarRemainingToday",
+      "IsActive": false
+    },
+    {
+      "Id": "d5c444df-b36d-46f6-8fc8-f2b3b259dd5a",
+      "Name": "Solar Confidence",
+      "Url": "{loxone}/dev/sps/io/SolarConfidence/{value}",
+      "DataKey": "SolarConfidence",
+      "IsActive": false
+    },
+    {
+      "Id": "a1e78012-af37-4c4f-91b0-7a20b8376310",
+      "Name": "Solar Peak Time",
+      "Url": "{loxone}/dev/sps/io/SolarPeakTime/{value}",
+      "DataKey": "SolarPeakTime",
+      "IsActive": false
+    },
+    {
+      "Id": "a608630b-a58d-4e34-8de7-4ac1e0256363",
+      "Name": "Solar Peak Power",
+      "Url": "{loxone}/dev/sps/io/SolarPeakPower/{value}",
+      "DataKey": "SolarPeakPower",
+      "IsActive": false
+    }
+  ]
+}

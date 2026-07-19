@@ -1,10 +1,10 @@
 services:
   loxone-solar-forecast:
     platform: linux/amd64
+    # Build locally from Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
-    image: loxone-solar-forecast:latest
     container_name: loxone-solar-forecast
     restart: unless-stopped
     ports:
@@ -35,7 +35,3 @@ services:
 volumes:
   solar_config:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data
