@@ -254,7 +254,7 @@ public class InfluxDBService : IInfluxDBService
   |> last()";
 
             var flowResult = await ExecuteFluxQueryAsync(settings, flowQuery);
-            var currentFlow = ExtractFluxValue(flowResult, 0);
+            var currentFlow = ExtractFluxValue(flowResult);
 
             // Query: Total water consumption (last value)
             var totalQuery = @"from(bucket:""loxone"")
@@ -263,7 +263,7 @@ public class InfluxDBService : IInfluxDBService
   |> last()";
 
             var totalResult = await ExecuteFluxQueryAsync(settings, totalQuery);
-            var totalConsumption = ExtractFluxValue(totalResult, 0);
+            var totalConsumption = ExtractFluxValue(totalResult);
 
             // Query: Today water consumption (sum of flow over today)
             var todayFluxStart = ConvertToUnixNanoseconds(todayStart);
@@ -276,7 +276,7 @@ public class InfluxDBService : IInfluxDBService
   |> sum()";
 
             var todayResult = await ExecuteFluxQueryAsync(settings, todayQuery);
-            var todayConsumption = ExtractFluxValue(todayResult, 0) / 1000; // Convert to m³
+            var todayConsumption = ExtractFluxValue(todayResult) / 1000; // Convert to m³
 
             return (currentFlow, totalConsumption, todayConsumption, true);
         }
@@ -304,23 +304,50 @@ public class InfluxDBService : IInfluxDBService
         return await response.Content.ReadAsStringAsync();
     }
 
-    private double ExtractFluxValue(string csvContent, int lineIndex = 1)
+    private static double ExtractFluxValue(string csvContent)
     {
         if (string.IsNullOrWhiteSpace(csvContent))
             return 0;
 
+        // InfluxDB annotated CSV format:
+        //   #datatype,...
+        //   #group,...
+        //   #default,_result,...
+        //   ,result,table,_start,_stop,_time,_value,_field,_measurement,...  ← header
+        //   ,_result,0,...,9.135,value,water,...                              ← data
         var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length <= lineIndex)
-            return 0;
 
-        var valueLine = lines[lineIndex];
-        var parts = valueLine.Split(',');
-        if (parts.Length == 0)
-            return 0;
+        int valueColIndex = -1;
+        bool headerFound = false;
 
-        // The value is typically in the last column
-        if (double.TryParse(parts[^1], out var value))
-            return value;
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("#")) continue;
+
+            if (!headerFound)
+            {
+                // Locate the _value column index from the header row
+                var headers = line.Split(',');
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    if (headers[i].Trim() == "_value") { valueColIndex = i; break; }
+                }
+                headerFound = true;
+                continue;
+            }
+
+            if (valueColIndex < 0) continue;
+
+            // First data row — parse _value
+            var parts = line.Split(',');
+            if (parts.Length > valueColIndex)
+            {
+                var raw = parts[valueColIndex].Trim();
+                if (double.TryParse(raw, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var result))
+                    return result;
+            }
+        }
 
         return 0;
     }
