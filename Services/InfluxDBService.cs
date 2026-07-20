@@ -11,6 +11,8 @@ public interface IInfluxDBService
     Task WriteBatterySOCAsync(double valuePercent, string sourceName);
     Task WriteBatteryPowerAsync(double valueWatts, string sourceName);
     Task WriteGridExportAsync(double exportWatts, double importWatts, string sourceName);
+    Task WriteWaterFlowAsync(double literPerMinute, string sourceName);
+    Task WriteWaterConsumptionAsync(double totalLiterM3, string sourceName);
     Task WriteForecastAsync(double forecastedWh, double confidencePercent, DateTime forecastHour, double peakW);
     Task WriteDailyForecastAsync(double forecastedWh, double confidencePercent, DateTime forecastDay);
     Task<bool> TestConnectionAsync();
@@ -125,6 +127,22 @@ public class InfluxDBService : IInfluxDBService
         var config = _configService.GetConfiguration();
         var timestamp = GetUnixNanoseconds();
         var lineProtocol = $"grid,source={EscapeTag(sourceName)} export={exportWatts},import={importWatts} {timestamp}";
+        await WriteLineProtocolAsync(lineProtocol, config.InfluxDB);
+    }
+
+    public async Task WriteWaterFlowAsync(double literPerMinute, string sourceName)
+    {
+        var config = _configService.GetConfiguration();
+        var timestamp = GetUnixNanoseconds();
+        var lineProtocol = $"water,source={EscapeTag(sourceName)},type=flow value={literPerMinute} {timestamp}";
+        await WriteLineProtocolAsync(lineProtocol, config.InfluxDB);
+    }
+
+    public async Task WriteWaterConsumptionAsync(double totalLiterM3, string sourceName)
+    {
+        var config = _configService.GetConfiguration();
+        var timestamp = GetUnixNanoseconds();
+        var lineProtocol = $"water,source={EscapeTag(sourceName)},type=consumption value={totalLiterM3} {timestamp}";
         await WriteLineProtocolAsync(lineProtocol, config.InfluxDB);
     }
 

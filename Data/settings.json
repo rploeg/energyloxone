@@ -18,6 +18,11 @@
     "EnablePush": false,
     "EnablePull": true
   },
+  "HomeWizard": {
+    "Enabled": false,
+    "IpAddress": "172.16.1.156",
+    "UpdateIntervalMinutes": 5
+  },
   "InfluxDB": {
     "EnableInfluxDB": true,
     "Url": "http://172.16.1.47:8086",

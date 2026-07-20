@@ -103,6 +103,7 @@ try
     builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IHistoryService, HistoryService>();
     builder.Services.AddScoped<IInfluxDBService, InfluxDBService>();
+    builder.Services.AddScoped<IHomeWizardCollector, HomeWizardCollector>();
 
     // ─────────────────────────────────────────────
     // Background Workers

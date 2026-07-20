@@ -7,6 +7,7 @@ public class AppConfiguration
 {
     public GeneralSettings General { get; set; } = new();
     public LoxoneSettings Loxone { get; set; } = new();
+    public HomeWizardSettings HomeWizard { get; set; } = new();
     public InfluxDBSettings InfluxDB { get; set; } = new();
     public SolarSettings Solar { get; set; } = new();
     public LocationSettings Location { get; set; } = new();
@@ -110,4 +111,11 @@ public class LoxonePushTarget
     public string Url { get; set; } = string.Empty;
     public string DataKey { get; set; } = string.Empty; // e.g. SolarForecastToday
     public bool IsActive { get; set; } = true;
+}
+
+public class HomeWizardSettings
+{
+    public bool Enabled { get; set; } = false;
+    public string? IpAddress { get; set; } = string.Empty;
+    public int UpdateIntervalMinutes { get; set; } = 5; // How often to collect water data
 }
