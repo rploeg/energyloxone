@@ -283,21 +283,23 @@ from(bucket: "loxone")
 ```
 
 ### Water Cost Estimate — Monthly (Stat)
-Assumes €1.50 per m³:
+Calculates m³ used in the last 30 days, multiplied by €1.50/m³:
 ```flux
-from(bucket: "loxone")
+first_val = from(bucket: "loxone")
   |> range(start: -30d)
   |> filter(fn: (r) => r._measurement == "water" and r.type == "consumption")
   |> first()
-  |> map(fn: (r) => ({r with firstVal: r._value}))
+  |> findRecord(fn: (key) => true, idx: 0)
 
-// Use last() - first() to get monthly delta, then multiply by cost per m³
-from(bucket: "loxone")
+last_val = from(bucket: "loxone")
   |> range(start: -30d)
   |> filter(fn: (r) => r._measurement == "water" and r.type == "consumption")
   |> last()
+  |> findRecord(fn: (key) => true, idx: 0)
+
+array.from(rows: [{_time: now(), _value: (last_val._value - first_val._value) * 1.50}])
+  |> yield(name: "monthly_water_cost_eur")
 ```
-> Note: Calculate cost as `(last_value - first_value) * 1.50` in Grafana field overrides / value mapping.
 
 ---
 
