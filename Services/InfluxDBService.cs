@@ -17,6 +17,7 @@ public interface IInfluxDBService
     Task WriteDailyForecastAsync(double forecastedWh, double confidencePercent, DateTime forecastDay);
     Task<bool> TestConnectionAsync();
     Task<(bool Success, string Message)> TestWriteAsync();
+    Task<(double CurrentFlow, double TotalConsumption, double TodayConsumption, bool IsConnected)> GetWaterDashboardDataAsync();
 }
 
 public class InfluxDBService : IInfluxDBService
