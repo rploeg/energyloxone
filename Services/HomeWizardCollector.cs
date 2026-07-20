@@ -55,9 +55,9 @@ public class HomeWizardCollector : IHomeWizardCollector
             var data = await FetchWaterDataAsync(config.HomeWizard);
             if (data != null)
             {
-                // Write current flow (liters/min)
+                // Write current flow (liters/min) - from active_liter_lpm
                 await _influxDBService.WriteWaterFlowAsync(
-                    data["current_liter_per_minute"],
+                    data["active_liter_lpm"],
                     "HomeWizard");
 
                 // Write total consumption (m³)
@@ -71,7 +71,7 @@ public class HomeWizardCollector : IHomeWizardCollector
 
                 _logger.LogDebug(
                     "HomeWizard water data collected: {FlowRate} L/min, {Total} m³",
-                    data["current_liter_per_minute"],
+                    data["active_liter_lpm"],
                     data["total_liter_m3"]);
             }
         }
@@ -156,18 +156,20 @@ public class HomeWizardCollector : IHomeWizardCollector
             var doc = System.Text.Json.JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            if (!root.TryGetProperty("water", out var waterElement))
+            // HomeWizard API returns fields at root level: active_liter_lpm and total_liter_m3
+            if (!root.TryGetProperty("active_liter_lpm", out var flowElement) ||
+                !root.TryGetProperty("total_liter_m3", out var totalElement))
             {
-                _logger.LogWarning("HomeWizard response missing 'water' property");
+                _logger.LogWarning("HomeWizard response missing expected properties");
                 return null;
             }
 
-            var flowPerMinute = waterElement.GetProperty("current_liter_per_minute").GetDouble();
-            var totalM3 = waterElement.GetProperty("total_liter_m3").GetDouble();
+            var flowPerMinute = flowElement.GetDouble();
+            var totalM3 = totalElement.GetDouble();
 
             return new Dictionary<string, double>
             {
-                { "current_liter_per_minute", flowPerMinute },
+                { "active_liter_lpm", flowPerMinute },
                 { "total_liter_m3", totalM3 }
             };
         }

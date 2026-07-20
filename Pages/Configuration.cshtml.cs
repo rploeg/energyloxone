@@ -95,4 +95,24 @@ public class ConfigurationModel : PageModel
             });
         }
     }
+
+    public async Task<IActionResult> OnPostTestHomeWizardAsync([FromServices] IHomeWizardCollector homeWizardCollector)
+    {
+        try
+        {
+            var success = await homeWizardCollector.TestConnectionAsync();
+            return new JsonResult(new { 
+                success,
+                message = success ? "HomeWizard connected! Data collected successfully." : "HomeWizard connection failed. Check IP address and network connectivity."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "HomeWizard connection test failed");
+            return new JsonResult(new { 
+                success = false, 
+                message = $"Error: {ex.Message}" 
+            });
+        }
+    }
 }

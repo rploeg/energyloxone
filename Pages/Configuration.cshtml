@@ -110,6 +110,34 @@
             </div>
         </div>
 
+        <!-- HomeWizard Settings -->
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-droplet me-2"></i>HomeWizard Water Meter</div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="Config.HomeWizard.Enabled" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label">Enable HomeWizard Integration</label>
+                        <div class="form-text">Collect real-time water usage data</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">IP Address</label>
+                        <input asp-for="Config.HomeWizard.IpAddress" class="form-control" placeholder="172.16.1.156" />
+                        <div class="form-text">Local network IP address of your HomeWizard device</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Update Interval (minutes)</label>
+                        <input asp-for="Config.HomeWizard.UpdateIntervalMinutes" type="number" class="form-control" min="1" max="60" />
+                        <div class="form-text">How often to collect water usage data (recommended: 5 min)</div>
+                    </div>
+                    <button type="button" id="testHomeWizardBtn" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-wifi me-1"></i>Test Connection
+                    </button>
+                    <span id="testHomeWizardResult" class="ms-2 small"></span>
+                </div>
+            </div>
+        </div>
+
         <!-- InfluxDB Settings -->
         <div class="col-12 col-xl-6">
             <div class="card">
@@ -329,6 +357,29 @@ document.getElementById('testInfluxBtn').addEventListener('click', async () => {
                    || document.querySelector('meta[name="csrf-token"]')?.content
                    || '';
         const resp = await fetch('?handler=TestInflux', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token }
+        });
+        const data = await resp.json();
+        result.textContent = data.message;
+        result.className = 'ms-2 small ' + (data.success ? 'text-success' : 'text-danger');
+    } catch (e) {
+        result.textContent = 'Request failed: ' + e.message;
+        result.className = 'ms-2 small text-danger';
+    }
+    btn.disabled = false;
+});
+
+document.getElementById('testHomeWizardBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('testHomeWizardBtn');
+    const result = document.getElementById('testHomeWizardResult');
+    btn.disabled = true;
+    result.textContent = 'Testing...';
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                   || document.querySelector('meta[name="csrf-token"]')?.content
+                   || '';
+        const resp = await fetch('?handler=TestHomeWizard', {
             method: 'POST',
             headers: { 'X-CSRF-TOKEN': token }
         });
