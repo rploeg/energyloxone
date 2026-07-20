@@ -235,6 +235,96 @@ public class InfluxDBService : IInfluxDBService
         }
     }
 
+    public async Task<(double CurrentFlow, double TotalConsumption, double TodayConsumption, bool IsConnected)> GetWaterDashboardDataAsync()
+    {
+        try
+        {
+            var settings = _configService.GetConfiguration().InfluxDB;
+            if (!settings.EnableInfluxDB || string.IsNullOrWhiteSpace(settings.Token))
+                return (0, 0, 0, false);
+
+            var now = DateTime.UtcNow;
+            var todayStart = now.Date;
+
+            // Query: Current water flow (last value from last hour)
+            var flowQuery = @"from(bucket:""loxone"")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == ""water"" and r.type == ""flow"")
+  |> last()";
+
+            var flowResult = await ExecuteFluxQueryAsync(settings, flowQuery);
+            var currentFlow = ExtractFluxValue(flowResult, 0);
+
+            // Query: Total water consumption (last value)
+            var totalQuery = @"from(bucket:""loxone"")
+  |> range(start: -30d)
+  |> filter(fn: (r) => r._measurement == ""water"" and r.type == ""consumption"")
+  |> last()";
+
+            var totalResult = await ExecuteFluxQueryAsync(settings, totalQuery);
+            var totalConsumption = ExtractFluxValue(totalResult, 0);
+
+            // Query: Today water consumption (sum of flow over today)
+            var todayStart = now.Date;
+            var todayFluxStart = ConvertToUnixNanoseconds(todayStart);
+            var todayFluxNow = ConvertToUnixNanoseconds(now);
+            
+            var todayQuery = @$"from(bucket:""loxone"")
+  |> range(start: {todayFluxStart}, stop: {todayFluxNow})
+  |> filter(fn: (r) => r._measurement == ""water"" and r.type == ""flow"")
+  |> integral(unit: 1m)
+  |> sum()";
+
+            var todayResult = await ExecuteFluxQueryAsync(settings, todayQuery);
+            var todayConsumption = ExtractFluxValue(todayResult, 0) / 1000; // Convert to m³
+
+            return (currentFlow, totalConsumption, todayConsumption, true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, ""Failed to get water dashboard data from InfluxDB"");
+            return (0, 0, 0, false);
+        }
+    }
+
+    private async Task<string> ExecuteFluxQueryAsync(InfluxDBSettings settings, string query)
+    {
+        var baseUrl = (settings.Url ?? """").TrimEnd('/');
+        var url = $""{baseUrl}/api/v2/query?org={Uri.EscapeDataString(settings.Organization ?? """")}""";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue(""Bearer"", settings.Token);
+        request.Headers.Add(""Accept"", ""application/csv"");
+        request.Content = new StringContent(query, System.Text.Encoding.UTF8, ""application/vnd.flux"");
+
+        var response = await _httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($""InfluxDB query failed: {response.StatusCode}"");
+
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    private double ExtractFluxValue(string csvContent, int lineIndex = 1)
+    {
+        if (string.IsNullOrWhiteSpace(csvContent))
+            return 0;
+
+        var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length <= lineIndex)
+            return 0;
+
+        var valueLine = lines[lineIndex];
+        var parts = valueLine.Split(',');
+        if (parts.Length == 0)
+            return 0;
+
+        // The value is typically in the last column
+        if (double.TryParse(parts[^1], out var value))
+            return value;
+
+        return 0;
+    }
+
     private static string EscapeTag(string tag)
     {
         return tag.Replace(" ", "\\ ").Replace(",", "\\,").Replace("=", "\\=");

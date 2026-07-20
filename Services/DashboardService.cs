@@ -16,6 +16,7 @@ public class DashboardService : IDashboardService
     private readonly IConfigurationService _configService;
     private readonly IWeatherService _weatherService;
     private readonly ILoxoneService _loxoneService;
+    private readonly IInfluxDBService _influxDBService;
     private readonly ILogger<DashboardService> _logger;
 
     public DashboardService(
@@ -24,6 +25,7 @@ public class DashboardService : IDashboardService
         IConfigurationService configService,
         IWeatherService weatherService,
         ILoxoneService loxoneService,
+        IInfluxDBService influxDBService,
         ILogger<DashboardService> logger)
     {
         _dbFactory = dbFactory;
@@ -31,6 +33,7 @@ public class DashboardService : IDashboardService
         _configService = configService;
         _weatherService = weatherService;
         _loxoneService = loxoneService;
+        _influxDBService = influxDBService;
         _logger = logger;
     }
 
@@ -104,6 +107,22 @@ public class DashboardService : IDashboardService
         }
         catch { dbOk = false; }
 
+        // Get water data from InfluxDB
+        var currentWaterFlow = 0.0;
+        var totalWaterConsumption = 0.0;
+        var todayWaterConsumption = 0.0;
+        var homeWizardConnected = false;
+
+        try
+        {
+            (currentWaterFlow, totalWaterConsumption, todayWaterConsumption, homeWizardConnected) = 
+                await _influxDBService.GetWaterDashboardDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not load water data for dashboard");
+        }
+
         return new DashboardViewModel
         {
             ApplicationName = config.General.ApplicationName,
@@ -135,6 +154,10 @@ public class DashboardService : IDashboardService
                 .ToList(),
             DailyForecast = dailyForecast,
             LastUpdated = now,
+            CurrentWaterFlowLpm = currentWaterFlow,
+            TotalWaterConsumptionM3 = totalWaterConsumption,
+            TodayWaterConsumptionM3 = todayWaterConsumption,
+            HomeWizardConnected = homeWizardConnected,
         };
     }
 }

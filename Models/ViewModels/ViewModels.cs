@@ -22,6 +22,12 @@ public class DashboardViewModel
     public List<DailyDataPoint> DailyForecast { get; set; } = new();
     public DateTime LastUpdated { get; set; }
     public string ApplicationName { get; set; } = "LoxoneSolarForecast";
+    
+    // Water meter data
+    public double CurrentWaterFlowLpm { get; set; }
+    public double TotalWaterConsumptionM3 { get; set; }
+    public double TodayWaterConsumptionM3 { get; set; }
+    public bool HomeWizardConnected { get; set; }
 }
 
 public class HourlyDataPoint
