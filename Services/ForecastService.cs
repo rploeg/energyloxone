@@ -216,6 +216,18 @@ public class ForecastService : IForecastService
 
         var todayHourly = hourly.Where(h => h.Hour.Date == todayUtc).ToList();
         var tomorrowHourly = hourly.Where(h => h.Hour.Date == todayUtc.AddDays(1)).ToList();
+        
+        var todaySum = todayHourly.Sum(h => h.ForecastedWh);
+        var tomorrowSum = tomorrowHourly.Sum(h => h.ForecastedWh);
+        _logger.LogInformation("GetForecastAsync: todayHourly={TodayCount} items, sum={TodayWh}Wh; tomorrowHourly={TomorrowCount} items, sum={TomorrowWh}Wh", 
+            todayHourly.Count, todaySum, tomorrowHourly.Count, tomorrowSum);
+
+        if (todayHourly.Any())
+        {
+            var sample = todayHourly.First();
+            _logger.LogInformation("GetForecastAsync: Sample todayHourly[0]: Hour={Hour}, ForecastedWh={Wh}, Peak={Peak}W", 
+                sample.Hour, sample.ForecastedWh, sample.ForecastedPeakW);
+        }
 
         var dailyGroups = hourly
             .GroupBy(h => h.Hour.Date)
