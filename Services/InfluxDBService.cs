@@ -265,7 +265,6 @@ public class InfluxDBService : IInfluxDBService
             var totalConsumption = ExtractFluxValue(totalResult, 0);
 
             // Query: Today water consumption (sum of flow over today)
-            var todayStart = now.Date;
             var todayFluxStart = ConvertToUnixNanoseconds(todayStart);
             var todayFluxNow = ConvertToUnixNanoseconds(now);
             
@@ -282,24 +281,24 @@ public class InfluxDBService : IInfluxDBService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, ""Failed to get water dashboard data from InfluxDB"");
+            _logger.LogWarning(ex, "Failed to get water dashboard data from InfluxDB");
             return (0, 0, 0, false);
         }
     }
 
     private async Task<string> ExecuteFluxQueryAsync(InfluxDBSettings settings, string query)
     {
-        var baseUrl = (settings.Url ?? """").TrimEnd('/');
-        var url = $""{baseUrl}/api/v2/query?org={Uri.EscapeDataString(settings.Organization ?? """")}""";
+        var baseUrl = (settings.Url ?? "").TrimEnd('/');
+        var url = $"{baseUrl}/api/v2/query?org={Uri.EscapeDataString(settings.Organization ?? "")}";
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue(""Bearer"", settings.Token);
-        request.Headers.Add(""Accept"", ""application/csv"");
-        request.Content = new StringContent(query, System.Text.Encoding.UTF8, ""application/vnd.flux"");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.Token);
+        request.Headers.Add("Accept", "application/csv");
+        request.Content = new StringContent(query, System.Text.Encoding.UTF8, "application/vnd.flux");
 
         var response = await _httpClient.SendAsync(request);
         if (!response.IsSuccessStatusCode)
-            throw new Exception($""InfluxDB query failed: {response.StatusCode}"");
+            throw new Exception($"InfluxDB query failed: {response.StatusCode}");
 
         return await response.Content.ReadAsStringAsync();
     }
