@@ -202,8 +202,9 @@ public class ForecastService : IForecastService
             .Select(h => h.GeneratedAt)
             .FirstOrDefaultAsync();
 
-        _logger.LogDebug("GetForecastAsync: latestGeneration={LatestGen}, now={Now}, todayUtc={TodayUtc}, totalForecastsInDb={Total}", 
-            latestGeneration, now, todayUtc, await db.HourlyForecasts.CountAsync());
+        var totalForecasts = await db.HourlyForecasts.CountAsync();
+        _logger.LogInformation("GetForecastAsync: latestGeneration={LatestGen}, now={Now}, todayUtc={TodayUtc}, totalForecastsInDb={Total}", 
+            latestGeneration, now, todayUtc, totalForecasts);
 
         var hourly = await db.HourlyForecasts
             .Where(h => h.GeneratedAt == latestGeneration && h.Hour >= todayUtc)
@@ -211,7 +212,7 @@ public class ForecastService : IForecastService
             .Take(7 * 24)
             .ToListAsync();
 
-        _logger.LogDebug("GetForecastAsync: Found {Count} hourly forecasts for today onwards", hourly.Count);
+        _logger.LogInformation("GetForecastAsync: Found {Count} hourly forecasts for today onwards (filter: latestGen=={LatestGen}, Hour>={TodayUtc})", hourly.Count, latestGeneration, todayUtc);
 
         var todayHourly = hourly.Where(h => h.Hour.Date == todayUtc).ToList();
         var tomorrowHourly = hourly.Where(h => h.Hour.Date == todayUtc.AddDays(1)).ToList();
