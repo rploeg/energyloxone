@@ -14,6 +14,7 @@ public class DataCollectionWorker : BackgroundService
     private readonly IServiceProvider _services;
     private readonly ILogger<DataCollectionWorker> _logger;
     private readonly Dictionary<Guid, DateTime> _lastCollectionTimes = new();
+    private readonly Dictionary<string, DateTime> _lastHomeWizardCollection = new();
     private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(1); // Check every minute
 
     public DataCollectionWorker(IServiceProvider services, ILogger<DataCollectionWorker> logger)
@@ -39,7 +40,7 @@ public class DataCollectionWorker : BackgroundService
 
             try
             {
-                // Check each data source and collect if its interval has passed
+                // Loxone data collection
                 var sourcesToCollect = config.LoxoneDataSources
                     .Where(ds => ds.IsActive && ShouldCollect(ds.Id, ds.UpdateIntervalMinutes, now))
                     .ToList();
@@ -47,9 +48,9 @@ public class DataCollectionWorker : BackgroundService
                 if (sourcesToCollect.Any())
                 {
                     schedulerState.UpdateDataCollection(true, null, null);
-                    _logger.LogDebug($"Collecting data from {sourcesToCollect.Count} sources");
+                    _logger.LogDebug($"Collecting data from {sourcesToCollect.Count} Loxone sources");
 
-                    // Collect all active sources
+                    // Collect all active Loxone sources
                     await loxoneService.CollectDataAsync();
 
                     // Update collection times for sources that were collected
@@ -67,6 +68,22 @@ public class DataCollectionWorker : BackgroundService
                     if (now.Hour == 0 && now.Minute < 2)
                     {
                         await UpdateYesterdayLearningAsync(scope.ServiceProvider, learningService);
+                    }
+                }
+
+                // HomeWizard water meter collection (independent schedule)
+                if (config.HomeWizard?.Enabled == true && ShouldCollectHomeWizard(now, config.HomeWizard.UpdateIntervalMinutes))
+                {
+                    try
+                    {
+                        var homeWizardCollector = scope.ServiceProvider.GetRequiredService<IHomeWizardCollector>();
+                        _logger.LogDebug("Collecting HomeWizard water data");
+                        await homeWizardCollector.CollectAsync();
+                        _lastHomeWizardCollection["HomeWizard"] = now;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "HomeWizard collection failed");
                     }
                 }
             }
@@ -94,6 +111,17 @@ public class DataCollectionWorker : BackgroundService
         if (!_lastCollectionTimes.TryGetValue(sourceId, out var lastTime))
         {
             // First time collecting this source
+            return true;
+        }
+
+        return (now - lastTime).TotalMinutes >= intervalMinutes;
+    }
+
+    private bool ShouldCollectHomeWizard(DateTime now, int intervalMinutes)
+    {
+        if (!_lastHomeWizardCollection.TryGetValue("HomeWizard", out var lastTime))
+        {
+            // First time collecting
             return true;
         }
 
